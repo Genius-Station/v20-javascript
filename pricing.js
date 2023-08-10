@@ -646,35 +646,17 @@ class EntitySpec {
 
         function generateStreamParser(streamChunkHandler)
         {
-            let chunkCache = '';
             return (chunk) => {
-                let msg;
-                let reminder = 0;
-                
                 try {
-                    if (chunkCache.length){
-                        chunk = chunkCache + chunk;
+                    let msg = JSON.parse(chunk);
+                
+                    if (msg.type == "HEARTBEAT") {
+                        streamChunkHandler(new PricingHeartbeat(msg));
+                    } else if (msg.type == "PRICE") {
+                        streamChunkHandler(new ClientPrice(msg));
                     }
-                    if (chunk.indexOf('}{') > -1) {
-                        reminder = chunk.substring(chunk.indexOf('}{')+1, chunk.length);
-                        chunk = chunk.substring(0, chunk.indexOf('}{') + 1)
-                    }
-                    msg = JSON.parse(chunk);
-                    chunkCache = '';
-                    if (reminder) {
-                        chunkCache += reminder;
-                    }
-                } catch (e) {
-                    chunkCache = chunk;
-                }
-
-                if (msg.type == "HEARTBEAT")
-                {
-                    streamChunkHandler(new PricingHeartbeat(msg));
-                }
-                else if (msg.type == "PRICE")
-                {
-                    streamChunkHandler(new ClientPrice(msg));
+                } catch (error) {
+                    console.error("Une erreur s'est produite lors du traitement du message:", error);
                 }
             }
         }
